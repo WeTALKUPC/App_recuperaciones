@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 st.title("Dashboard de Cumplimiento por Feriado y Programa")
 
 # Cargar el archivo Excel directamente desde el repositorio
-DATA_URL = "https://github.com/WeTALKUPC/App_recuperaciones/blob/main/RECUPERACIONES%20FERIADOS%20V1.xlsx"
+DATA_URL = "https://raw.githubusercontent.com/WeTALKUPC/App_recuperaciones/main/RECUPERACIONES%20FERIADOS%20V1.xlsx"
 df = pd.read_excel(DATA_URL, engine="openpyxl")
 
 # Mostrar vista previa de los datos
