@@ -1,4 +1,3 @@
-
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -17,6 +16,15 @@ st.write(df.head())
 # Lista de feriados
 feriados = df.columns[2:-1]  # Excluir columnas no relacionadas con feriados
 feriado = st.selectbox("Selecciona un feriado:", feriados)
+
+# Limpiar los datos en la columna seleccionada (feriado)
+df[feriado] = df[feriado].str.strip().str.upper()
+
+# Unificar valores duplicados o inconsistentes
+df[feriado] = df[feriado].replace({
+    "NO TENIA CLASES": "NO TENÍA CLASES",  # Corrige posibles errores de escritura
+    "NO TENÍA CLASES ": "NO TENÍA CLASES"  # Elimina espacios adicionales
+})
 
 # Lista de programas
 programas = df["PROGRAMA"].unique()
