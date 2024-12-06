@@ -3,7 +3,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 # Título del Dashboard
-st.title("Dashboard de Cumplimiento por Feriado, Programa y Docente")
+st.title("Dashboard de Cumplimiento por Feriado, Programa e Instructor")
 
 # Cargar el archivo Excel directamente desde el repositorio
 DATA_URL = "https://raw.githubusercontent.com/WeTALKUPC/App_recuperaciones/main/RECUPERACIONES%20FERIADOS%20V1.xlsx"
@@ -13,10 +13,13 @@ df = pd.read_excel(DATA_URL, engine="openpyxl")
 st.subheader("Vista previa de los datos")
 st.write(df.head())
 
-# Filtro por nombre de docente
-docente = st.text_input("Ingresa el nombre del docente para buscar:", "")
-if docente:
-    df = df[df["INSTRUCTOR"].str.contains(docente, case=False, na=False)]
+# Lista de instructores
+instructores = df["INSTRUCTOR"].unique()
+instructor = st.selectbox("Selecciona un instructor:", ["TODOS"] + list(instructores))
+
+# Filtro por instructor
+if instructor != "TODOS":
+    df = df[df["INSTRUCTOR"] == instructor]
 
 # Lista de feriados
 feriados = df.columns[2:-1]  # Excluir columnas no relacionadas con feriados
@@ -44,11 +47,11 @@ if feriado != "TODOS":
     cumplimiento = df[feriado].value_counts(normalize=True) * 100
 
     # Mostrar gráfico
-    st.subheader(f"Cumplimiento para {feriado} ({programa})")
+    st.subheader(f"Cumplimiento para {feriado} ({programa}, {instructor})")
     st.bar_chart(cumplimiento)
 else:
     # Mostrar tabla de cumplimiento para todos los feriados
-    st.subheader(f"Cumplimiento para todos los feriados ({programa})")
+    st.subheader(f"Cumplimiento para todos los feriados ({programa}, {instructor})")
     st.write(df)
 
 # Descargar datos filtrados
