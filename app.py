@@ -17,8 +17,8 @@ st.write(df.head())
 instructores = df["INSTRUCTOR"].unique()
 instructor = st.selectbox("Selecciona un instructor:", ["TODOS"] + list(instructores))
 
-# Lista de feriados
-feriados = df.columns[2:-2]  # Excluir columnas no relacionadas con feriados ni observaciones
+# Lista de feriados (incluye todas las columnas de feriados)
+feriados = df.columns[2:-1]  # Ajustado para incluir el feriado del 1 DE NOVIEMBRE 2024
 feriado = st.selectbox("Selecciona un feriado (o TODOS):", ["TODOS"] + list(feriados))
 
 # Lista de programas
