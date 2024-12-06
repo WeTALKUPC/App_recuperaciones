@@ -9,22 +9,6 @@ st.title("Dashboard de Cumplimiento por Feriado, Programa e Instructor")
 DATA_URL = "https://raw.githubusercontent.com/WeTALKUPC/App_recuperaciones/main/RECUPERACIONES%20FERIADOS%20V1.xlsx"
 df = pd.read_excel(DATA_URL, engine="openpyxl")
 
-# Mostrar vista previa de los datos
-st.subheader("Vista previa de los datos")
-st.write(df.head())
-
-# Lista de instructores
-instructores = df["INSTRUCTOR"].unique()
-instructor = st.selectbox("Selecciona un instructor:", ["TODOS"] + list(instructores))
-
-# Lista de feriados (incluye todas las columnas de feriados)
-feriados = df.columns[2:-1]  # Ajustado para incluir el feriado del 1 DE NOVIEMBRE 2024
-feriado = st.selectbox("Selecciona un feriado (o TODOS):", ["TODOS"] + list(feriados))
-
-# Lista de programas
-programas = df["PROGRAMA"].unique()
-programa = st.selectbox("Selecciona un programa:", ["TODOS"] + list(programas))
-
 # Limpiar los datos en las columnas seleccionadas
 for col in df.columns[2:]:
     df[col] = df[col].str.strip().str.upper()
@@ -33,25 +17,62 @@ for col in df.columns[2:]:
         "NO TENÍA CLASES ": "NO TENÍA CLASES"
     })
 
-# Aplicar filtro por instructor
+# Sección: Mostrar instructores que no recuperaron clases
+st.subheader("Instructores que no recuperaron clases")
+
+# Filtrar los instructores con al menos un "NO"
+instructores_no = df.loc[df.iloc[:, 2:-1].eq("NO").any(axis=1), ["INSTRUCTOR", "PROGRAMA"]]
+
+# Agregar observaciones específicas para estos instructores
+instructores_no["Observaciones"] = df.loc[df.iloc[:, 2:-1].eq("NO").any(axis=1), "OBSERVACIÓN"]
+
+# Mostrar tabla interactiva con instructores y observaciones
+st.write("A continuación, se muestran los instructores que no recuperaron clases en algún feriado:")
+st.dataframe(instructores_no)
+
+# Filtro adicional por programa
+programa_filtro = st.selectbox("Filtrar por programa:", ["TODOS"] + list(df["PROGRAMA"].unique()))
+if programa_filtro != "TODOS":
+    instructores_no = instructores_no[instructores_no["PROGRAMA"] == programa_filtro]
+    st.write(f"Instructores filtrados por programa: {programa_filtro}")
+    st.dataframe(instructores_no)
+
+# Descarga de la tabla filtrada
+st.subheader("Descargar lista de instructores que no recuperaron clases")
+csv_no = instructores_no.to_csv(index=False)
+st.download_button(
+    label="Descargar CSV",
+    data=csv_no,
+    file_name="instructores_no_recuperaron.csv",
+    mime="text/csv",
+)
+
+# Incluir la funcionalidad anterior (cumplimiento por instructor y feriado)
+# Lista de instructores
+st.subheader("Consulta por instructor, feriado y programa")
+instructores = df["INSTRUCTOR"].unique()
+instructor = st.selectbox("Selecciona un instructor:", ["TODOS"] + list(instructores))
+
+# Lista de feriados
+feriados = df.columns[2:-1]  # Excluir columna de observaciones
+feriado = st.selectbox("Selecciona un feriado (o TODOS):", ["TODOS"] + list(feriados))
+
+# Lista de programas
+programas = df["PROGRAMA"].unique()
+programa = st.selectbox("Selecciona un programa:", ["TODOS"] + list(programas))
+
+# Aplicar filtros y mostrar resultados como en la implementación previa
 if instructor != "TODOS":
     df_instructor = df[df["INSTRUCTOR"] == instructor]
 else:
     df_instructor = df
 
-# Aplicar filtro por programa
 if programa != "TODOS":
     df_instructor = df_instructor[df_instructor["PROGRAMA"] == programa]
 
-# Mostrar resultados
 if feriado != "TODOS":
-    # Calcular el porcentaje de cumplimiento para el feriado seleccionado
     cumplimiento = df_instructor[feriado].value_counts(normalize=True) * 100
-
-    # Crear colores dinámicos
     colors = ["red" if index == "NO" else "blue" if index == "SI" else "gray" for index in cumplimiento.index]
-
-    # Mostrar gráfico
     st.subheader(f"Cumplimiento para {feriado} ({programa}, {instructor})")
     fig, ax = plt.subplots()
     cumplimiento.plot(kind="bar", color=colors, ax=ax)
@@ -60,17 +81,13 @@ if feriado != "TODOS":
     ax.set_xlabel("Estado")
     st.pyplot(fig)
 
-    # Mostrar observaciones si hay "NO"
     if "NO" in cumplimiento.index:
         st.subheader("Observaciones")
         observaciones = df_instructor.loc[df_instructor[feriado] == "NO", "OBSERVACIÓN"].dropna().unique()
         for obs in observaciones:
             st.write(f"- {obs}")
-
 else:
-    # Mostrar un único gráfico para todos los feriados si se selecciona "TODOS"
     st.subheader(f"Cumplimiento total por feriado ({programa}, {instructor})")
-    
     if instructor != "TODOS":
         cumplimiento_total = pd.DataFrame(index=["SI", "NO", "NO TENÍA CLASES"])
         for fer in feriados:
@@ -80,27 +97,15 @@ else:
         cumplimiento_total = cumplimiento_total.transpose()
         colors = ["blue" if index == "SI" else "red" if index == "NO" else "gray" for index in cumplimiento_total.columns]
         cumplimiento_total.plot(kind="bar", stacked=True, color=colors, figsize=(10, 6))
-        
         plt.title(f"Cumplimiento total por feriado para {instructor}")
         plt.xlabel("Feriados")
         plt.ylabel("Porcentaje")
         plt.legend(title="Estado", bbox_to_anchor=(1.05, 1), loc="upper left")
         st.pyplot(plt)
-        
-        # Mostrar observaciones si hay "NO"
+
         st.subheader("Observaciones")
-        observaciones = df_instructor.loc[:, "OBSERVACIÓN"].dropna().unique()
+        observaciones = df_instructor["OBSERVACIÓN"].dropna().unique()
         for obs in observaciones:
             st.write(f"- {obs}")
     else:
         st.write("Selecciona un instructor o un programa específico para más detalles.")
-
-# Descargar datos filtrados
-st.subheader("Descargar datos filtrados")
-csv = df_instructor.to_csv(index=False)
-st.download_button(
-    label="Descargar CSV",
-    data=csv,
-    file_name="datos_filtrados.csv",
-    mime="text/csv",
-)
