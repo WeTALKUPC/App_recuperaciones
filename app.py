@@ -17,13 +17,13 @@ st.write(df.head())
 instructores = df["INSTRUCTOR"].unique()
 instructor = st.selectbox("Selecciona un instructor:", ["TODOS"] + list(instructores))
 
-# Filtro por instructor
-if instructor != "TODOS":
-    df = df[df["INSTRUCTOR"] == instructor]
-
 # Lista de feriados
 feriados = df.columns[2:-1]  # Excluir columnas no relacionadas con feriados
 feriado = st.selectbox("Selecciona un feriado (o TODOS):", ["TODOS"] + list(feriados))
+
+# Lista de programas
+programas = df["PROGRAMA"].unique()
+programa = st.selectbox("Selecciona un programa:", ["TODOS"] + list(programas))
 
 # Limpiar los datos en las columnas seleccionadas
 for col in df.columns[2:]:
@@ -33,15 +33,15 @@ for col in df.columns[2:]:
         "NO TENÍA CLASES ": "NO TENÍA CLASES"
     })
 
-# Lista de programas
-programas = df["PROGRAMA"].unique()
-programa = st.selectbox("Selecciona un programa:", ["TODOS"] + list(programas))
+# Aplicar filtro por instructor
+if instructor != "TODOS":
+    df = df[df["INSTRUCTOR"] == instructor]
 
-# Filtrar por programa si se selecciona uno específico
+# Aplicar filtro por programa
 if programa != "TODOS":
     df = df[df["PROGRAMA"] == programa]
 
-# Si un feriado específico es seleccionado
+# Mostrar gráfico según el feriado seleccionado
 if feriado != "TODOS":
     # Calcular el porcentaje de cumplimiento para el feriado seleccionado
     cumplimiento = df[feriado].value_counts(normalize=True) * 100
@@ -50,9 +50,15 @@ if feriado != "TODOS":
     st.subheader(f"Cumplimiento para {feriado} ({programa}, {instructor})")
     st.bar_chart(cumplimiento)
 else:
-    # Mostrar tabla de cumplimiento para todos los feriados
-    st.subheader(f"Cumplimiento para todos los feriados ({programa}, {instructor})")
-    st.write(df)
+    # Mostrar gráfico de cumplimiento para todos los feriados
+    st.subheader(f"Cumplimiento total por feriado ({programa}, {instructor})")
+    cumplimiento_total = {}
+    for fer in feriados:
+        cumplimiento_total[fer] = df[fer].value_counts(normalize=True) * 100
+
+    for fer, data in cumplimiento_total.items():
+        st.subheader(f"Cumplimiento para {fer}")
+        st.bar_chart(data)
 
 # Descargar datos filtrados
 st.subheader("Descargar datos filtrados")
