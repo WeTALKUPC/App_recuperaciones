@@ -9,14 +9,6 @@ st.title("Dashboard de Cumplimiento por Feriado, Programa e Instructor")
 DATA_URL = "https://raw.githubusercontent.com/WeTALKUPC/App_recuperaciones/main/RECUPERACIONES%20FERIADOS%20V1.xlsx"
 df = pd.read_excel(DATA_URL, engine="openpyxl")
 
-# Limpiar los datos en las columnas seleccionadas
-for col in df.columns[2:]:
-    df[col] = df[col].str.strip().str.upper()
-    df[col] = df[col].replace({
-        "NO TENIA CLASES": "NO TENÍA CLASES",
-        "NO TENÍA CLASES ": "NO TENÍA CLASES"
-    })
-
 # Mostrar vista previa de los datos
 st.subheader("Vista previa de los datos")
 st.write(df.head())
@@ -26,12 +18,20 @@ instructores = df["INSTRUCTOR"].unique()
 instructor = st.selectbox("Selecciona un instructor:", ["TODOS"] + list(instructores))
 
 # Lista de feriados
-feriados = df.columns[2:-1]  # Excluir la columna de observaciones
+feriados = df.columns[2:-1]  # Excluir columna de observaciones
 feriado = st.selectbox("Selecciona un feriado (o TODOS):", ["TODOS"] + list(feriados))
 
 # Lista de programas
 programas = df["PROGRAMA"].unique()
 programa = st.selectbox("Selecciona un programa:", ["TODOS"] + list(programas))
+
+# Limpiar los datos en las columnas seleccionadas
+for col in df.columns[2:]:
+    df[col] = df[col].str.strip().str.upper()
+    df[col] = df[col].replace({
+        "NO TENIA CLASES": "NO TENÍA CLASES",
+        "NO TENÍA CLASES ": "NO TENÍA CLASES"
+    })
 
 # Aplicar filtro por instructor
 if instructor != "TODOS":
@@ -49,7 +49,7 @@ if feriado != "TODOS":
     cumplimiento = df_instructor[feriado].value_counts(normalize=True) * 100
 
     # Crear colores dinámicos
-    colors = ["red" if index == "NO" else "blue" if index == "SI" else "gray" for index in cumplimiento.index]
+    colors = ["red" if index == "NO" else "blue" for index in cumplimiento.index]
 
     # Mostrar gráfico
     st.subheader(f"Cumplimiento para {feriado} ({programa}, {instructor})")
@@ -72,13 +72,13 @@ else:
     st.subheader(f"Cumplimiento total por feriado ({programa}, {instructor})")
     
     if instructor != "TODOS":
-        cumplimiento_total = pd.DataFrame(index=["SI", "NO", "NO TENÍA CLASES"])
+        cumplimiento_total = pd.DataFrame(index=["SI", "NO"])
         for fer in feriados:
             values = df_instructor[fer].value_counts(normalize=True) * 100
             cumplimiento_total[fer] = values.reindex(cumplimiento_total.index, fill_value=0)
 
         cumplimiento_total = cumplimiento_total.transpose()
-        colors = ["blue" if index == "SI" else "red" if index == "NO" else "gray" for index in cumplimiento_total.columns]
+        colors = ["blue" if index == "SI" else "red" for index in cumplimiento_total.columns]
         cumplimiento_total.plot(kind="bar", stacked=True, color=colors, figsize=(10, 6))
         
         plt.title(f"Cumplimiento total por feriado para {instructor}")
@@ -95,34 +95,52 @@ else:
     else:
         st.write("Selecciona un instructor o un programa específico para más detalles.")
 
-# Nuevo Selector: Filtrar por estado de cumplimiento
+# Filtrar por estado de cumplimiento
 st.subheader("Filtrar por estado de cumplimiento")
-
 estado = st.selectbox("Selecciona un estado:", ["SI", "NO", "NO TENÍA CLASES"])
 
-# Filtrar los datos según el estado seleccionado
-df_estado = df.loc[df.iloc[:, 2:-1].eq(estado).any(axis=1), ["INSTRUCTOR", "PROGRAMA"]]
+if estado == "SI":
+    resultados_si = df[df[feriados].apply(lambda row: row.str.contains("SI").any(), axis=1)]
+    st.write("Instructores que recuperaron clases:")
+    resultados_si = resultados_si.melt(
+        id_vars=["INSTRUCTOR", "PROGRAMA"],
+        value_vars=feriados,
+        var_name="Feriado",
+        value_name="Estado"
+    )
+    resultados_si = resultados_si[resultados_si["Estado"] == "SI"]
+    st.write(resultados_si)
 
-if estado == "NO":
-    st.write(f"Instructores que no recuperaron clases:")
-    df_estado["Observaciones"] = df.loc[df.iloc[:, 2:-1].eq(estado).any(axis=1), "OBSERVACIÓN"]
-    st.dataframe(df_estado)
+elif estado == "NO":
+    resultados_no = df[df[feriados].apply(lambda row: row.str.contains("NO").any(), axis=1)]
+    st.write("Instructores que no recuperaron clases:")
+    resultados_no = resultados_no.melt(
+        id_vars=["INSTRUCTOR", "PROGRAMA", "OBSERVACIÓN"],
+        value_vars=feriados,
+        var_name="Feriado",
+        value_name="Estado"
+    )
+    resultados_no = resultados_no[resultados_no["Estado"] == "NO"]
+    st.write(resultados_no)
 
-    # Mostrar observaciones
-    st.subheader("Observaciones")
-    observaciones = df_estado["Observaciones"].dropna().unique()
-    for obs in observaciones:
-        st.write(f"- {obs}")
-else:
-    st.write(f"Instructores con estado '{estado}':")
-    st.dataframe(df_estado)
+elif estado == "NO TENÍA CLASES":
+    resultados_ntc = df[df[feriados].apply(lambda row: row.str.contains("NO TENÍA CLASES").any(), axis=1)]
+    st.write("Instructores que no tenían clases:")
+    resultados_ntc = resultados_ntc.melt(
+        id_vars=["INSTRUCTOR", "PROGRAMA"],
+        value_vars=feriados,
+        var_name="Feriado",
+        value_name="Estado"
+    )
+    resultados_ntc = resultados_ntc[resultados_ntc["Estado"] == "NO TENÍA CLASES"]
+    st.write(resultados_ntc)
 
-# Descargar los datos filtrados
-st.subheader("Descargar resultados filtrados")
-csv_estado = df_estado.to_csv(index=False)
+# Descargar datos filtrados
+st.subheader("Descargar datos filtrados")
+csv = df_instructor.to_csv(index=False)
 st.download_button(
     label="Descargar CSV",
-    data=csv_estado,
-    file_name=f"instructores_{estado.lower()}.csv",
+    data=csv,
+    file_name="datos_filtrados.csv",
     mime="text/csv",
 )
