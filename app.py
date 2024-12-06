@@ -18,7 +18,7 @@ instructores = df["INSTRUCTOR"].unique()
 instructor = st.selectbox("Selecciona un instructor:", ["TODOS"] + list(instructores))
 
 # Lista de feriados
-feriados = df.columns[2:-1]  # Excluir columnas no relacionadas con feriados
+feriados = df.columns[2:-2]  # Excluir columnas no relacionadas con feriados ni observaciones
 feriado = st.selectbox("Selecciona un feriado (o TODOS):", ["TODOS"] + list(feriados))
 
 # Lista de programas
@@ -35,48 +35,69 @@ for col in df.columns[2:]:
 
 # Aplicar filtro por instructor
 if instructor != "TODOS":
-    df = df[df["INSTRUCTOR"] == instructor]
+    df_instructor = df[df["INSTRUCTOR"] == instructor]
+else:
+    df_instructor = df
 
 # Aplicar filtro por programa
 if programa != "TODOS":
-    df = df[df["PROGRAMA"] == programa]
+    df_instructor = df_instructor[df_instructor["PROGRAMA"] == programa]
 
 # Mostrar resultados
 if feriado != "TODOS":
     # Calcular el porcentaje de cumplimiento para el feriado seleccionado
-    cumplimiento = df[feriado].value_counts(normalize=True) * 100
+    cumplimiento = df_instructor[feriado].value_counts(normalize=True) * 100
+
+    # Crear colores dinámicos
+    colors = ["red" if index == "NO" else "blue" for index in cumplimiento.index]
 
     # Mostrar gráfico
     st.subheader(f"Cumplimiento para {feriado} ({programa}, {instructor})")
-    st.bar_chart(cumplimiento)
+    fig, ax = plt.subplots()
+    cumplimiento.plot(kind="bar", color=colors, ax=ax)
+    ax.set_title(f"Cumplimiento para {feriado}")
+    ax.set_ylabel("Porcentaje")
+    ax.set_xlabel("Estado")
+    st.pyplot(fig)
+
+    # Mostrar observaciones si hay "NO"
+    if "NO" in cumplimiento.index:
+        st.subheader("Observaciones")
+        observaciones = df_instructor.loc[df_instructor[feriado] == "NO", "OBSERVACIÓN"].dropna().unique()
+        for obs in observaciones:
+            st.write(f"- {obs}")
+
 else:
     # Mostrar un único gráfico para todos los feriados si se selecciona "TODOS"
     st.subheader(f"Cumplimiento total por feriado ({programa}, {instructor})")
     
     if instructor != "TODOS":
-        # Generar un gráfico con barras apiladas para todas las fechas del año
-        cumplimiento_total = pd.DataFrame()
+        cumplimiento_total = pd.DataFrame(index=["SI", "NO"])
         for fer in feriados:
-            cumplimiento_total[fer] = df[fer].value_counts(normalize=True) * 100
-        
-        cumplimiento_total = cumplimiento_total.transpose()  # Transponer para graficar
-        cumplimiento_total.plot(kind="bar", figsize=(10, 6), stacked=True)
+            values = df_instructor[fer].value_counts(normalize=True) * 100
+            cumplimiento_total[fer] = values.reindex(cumplimiento_total.index, fill_value=0)
+
+        cumplimiento_total = cumplimiento_total.transpose()
+        colors = ["blue" if index == "SI" else "red" for index in cumplimiento_total.columns]
+        cumplimiento_total.plot(kind="bar", stacked=True, color=colors, figsize=(10, 6))
         
         plt.title(f"Cumplimiento total por feriado para {instructor}")
         plt.xlabel("Feriados")
         plt.ylabel("Porcentaje")
         plt.legend(title="Estado", bbox_to_anchor=(1.05, 1), loc="upper left")
         st.pyplot(plt)
+        
+        # Mostrar observaciones si hay "NO"
+        st.subheader("Observaciones")
+        observaciones = df_instructor.loc[:, "OBSERVACIÓN"].dropna().unique()
+        for obs in observaciones:
+            st.write(f"- {obs}")
     else:
-        # Mostrar gráficos individuales por feriado
-        for fer in feriados:
-            cumplimiento = df[fer].value_counts(normalize=True) * 100
-            st.subheader(f"Cumplimiento para {fer}")
-            st.bar_chart(cumplimiento)
+        st.write("Selecciona un instructor o un programa específico para más detalles.")
 
 # Descargar datos filtrados
 st.subheader("Descargar datos filtrados")
-csv = df.to_csv(index=False)
+csv = df_instructor.to_csv(index=False)
 st.download_button(
     label="Descargar CSV",
     data=csv,
