@@ -9,10 +9,6 @@ st.title("Dashboard de Cumplimiento por Feriado, Programa e Instructor")
 DATA_URL = "https://raw.githubusercontent.com/WeTALKUPC/App_recuperaciones/main/RECUPERACIONES%20FERIADOS%20V1.xlsx"
 df = pd.read_excel(DATA_URL, engine="openpyxl")
 
-# Mostrar vista previa de los datos
-st.subheader("Vista previa de los datos")
-st.write(df.head())
-
 # Lista de instructores
 instructores = df["INSTRUCTOR"].unique()
 instructor = st.selectbox("Selecciona un instructor:", ["TODOS"] + list(instructores))
