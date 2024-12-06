@@ -101,7 +101,6 @@ estado = st.selectbox("Selecciona un estado:", ["SI", "NO", "NO TENÍA CLASES"])
 
 if estado == "SI":
     resultados_si = df[df[feriados].apply(lambda row: row.str.contains("SI").any(), axis=1)]
-    st.write("Instructores que recuperaron clases:")
     resultados_si = resultados_si.melt(
         id_vars=["INSTRUCTOR", "PROGRAMA"],
         value_vars=feriados,
@@ -109,11 +108,11 @@ if estado == "SI":
         value_name="Estado"
     )
     resultados_si = resultados_si[resultados_si["Estado"] == "SI"]
-    st.write(resultados_si)
+    st.write("Instructores que recuperaron clases:")
+    st.write(resultados_si[["INSTRUCTOR", "PROGRAMA", "Feriado"]])
 
 elif estado == "NO":
     resultados_no = df[df[feriados].apply(lambda row: row.str.contains("NO").any(), axis=1)]
-    st.write("Instructores que no recuperaron clases:")
     resultados_no = resultados_no.melt(
         id_vars=["INSTRUCTOR", "PROGRAMA", "OBSERVACIÓN"],
         value_vars=feriados,
@@ -121,11 +120,11 @@ elif estado == "NO":
         value_name="Estado"
     )
     resultados_no = resultados_no[resultados_no["Estado"] == "NO"]
-    st.write(resultados_no)
+    st.write("Instructores que no recuperaron clases:")
+    st.write(resultados_no[["INSTRUCTOR", "PROGRAMA", "Feriado", "OBSERVACIÓN"]])
 
 elif estado == "NO TENÍA CLASES":
     resultados_ntc = df[df[feriados].apply(lambda row: row.str.contains("NO TENÍA CLASES").any(), axis=1)]
-    st.write("Instructores que no tenían clases:")
     resultados_ntc = resultados_ntc.melt(
         id_vars=["INSTRUCTOR", "PROGRAMA"],
         value_vars=feriados,
@@ -133,7 +132,8 @@ elif estado == "NO TENÍA CLASES":
         value_name="Estado"
     )
     resultados_ntc = resultados_ntc[resultados_ntc["Estado"] == "NO TENÍA CLASES"]
-    st.write(resultados_ntc)
+    st.write("Instructores que no tenían clases:")
+    st.write(resultados_ntc[["INSTRUCTOR", "PROGRAMA", "Feriado"]])
 
 # Descargar datos filtrados
 st.subheader("Descargar datos filtrados")
