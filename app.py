@@ -49,7 +49,10 @@ if feriado != "TODOS":
     cumplimiento = df_instructor[feriado].value_counts(normalize=True) * 100
 
     # Crear colores dinámicos
-    colors = ["red" if index == "NO" else "blue" for index in cumplimiento.index]
+    colors = [
+        "red" if index == "NO" else "blue" if index == "SI" else "gray"
+        for index in cumplimiento.index
+    ]
 
     # Mostrar gráfico
     st.subheader(f"Cumplimiento para {feriado} ({programa}, {instructor})")
@@ -72,13 +75,13 @@ else:
     st.subheader(f"Cumplimiento total por feriado ({programa}, {instructor})")
     
     if instructor != "TODOS":
-        cumplimiento_total = pd.DataFrame(index=["SI", "NO"])
+        cumplimiento_total = pd.DataFrame(index=["SI", "NO", "NO TENÍA CLASES"])
         for fer in feriados:
             values = df_instructor[fer].value_counts(normalize=True) * 100
             cumplimiento_total[fer] = values.reindex(cumplimiento_total.index, fill_value=0)
 
         cumplimiento_total = cumplimiento_total.transpose()
-        colors = ["blue" if index == "SI" else "red" for index in cumplimiento_total.columns]
+        colors = ["blue", "red", "gray"]  # Colores para SI, NO, NO TENÍA CLASES
         cumplimiento_total.plot(kind="bar", stacked=True, color=colors, figsize=(10, 6))
         
         plt.title(f"Cumplimiento total por feriado para {instructor}")
